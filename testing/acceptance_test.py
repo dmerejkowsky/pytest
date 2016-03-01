@@ -224,6 +224,34 @@ class TestGeneralUsage:
         result = testdir.runpytest()
         assert result.ret == EXIT_TESTSFAILED
 
+    def test_hangtwenty_1235(self, testdir):
+        testdir.makeconftest("""
+        import os
+        import pytest
+
+        @pytest.fixture
+        def testing_workdir(tmpdir, request):
+            saved_path = os.getcwd()
+
+            tmpdir.chdir()
+            workdir = tmpdir.mkdir('mysubdir')
+
+            def return_to_saved_path():
+                os.chdir(saved_path)
+
+            request.addfinalizer(return_to_saved_path)
+        """)
+        testdir.makepyfile("""
+        import py
+        def test_deleting_cwd(testing_workdir, monkeypatch):
+            work = py.path.local(".").mkdir("work")
+            monkeypatch.chdir(work)
+            work.remove()
+            assert False
+        """)
+        result = testdir.runpytest()
+        assert result.ret == EXIT_TESTSFAILED
+
     def test_issue109_sibling_conftests_not_loaded(self, testdir):
         sub1 = testdir.tmpdir.mkdir("sub1")
         sub2 = testdir.tmpdir.mkdir("sub2")
