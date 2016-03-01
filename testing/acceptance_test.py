@@ -3,7 +3,7 @@ import sys
 import _pytest._code
 import py
 import pytest
-from _pytest.main import EXIT_NOTESTSCOLLECTED, EXIT_USAGEERROR
+from _pytest.main import EXIT_NOTESTSCOLLECTED, EXIT_USAGEERROR, EXIT_TESTSFAILED
 
 
 class TestGeneralUsage:
@@ -211,6 +211,18 @@ class TestGeneralUsage:
         """))
         result = testdir.runpython(p)
         assert not result.ret
+
+    def test_removing_cwd(self, testdir):
+        testdir.makepyfile("""
+        def test_deleting_cwd(tmpdir, monkeypatch):
+            work = tmpdir.mkdir("work")
+            monkeypatch.chdir(work)
+            work.remove()
+            # Actual testing here
+            assert False
+        """)
+        result = testdir.runpytest()
+        assert result.ret == EXIT_TESTSFAILED
 
     def test_issue109_sibling_conftests_not_loaded(self, testdir):
         sub1 = testdir.tmpdir.mkdir("sub1")
@@ -678,4 +690,3 @@ class TestDurationWithFixture:
             * setup *test_1*
             * call *test_1*
         """)
-
